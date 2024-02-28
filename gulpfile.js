@@ -17,7 +17,7 @@ gulp.task("copy-html", () => {
 
 gulp.task("build-js", () => {
 	return gulp
-		.src("./src/js/main.js")
+		.src("./src/js/script.js")
 		.pipe(
 			webpack({
 				mode: "development",
@@ -77,7 +77,6 @@ gulp.task("watch", () => {
 		server: "./dist/",
 		port: 4000,
 		notify: true,
-		browser: 'chrome',
 	});
 
 	gulp.watch("./src/index.html", gulp.parallel("copy-html"));

@@ -198,33 +198,54 @@ window.addEventListener('DOMContentLoaded', () => {
 
     }
 
-    new MenuCard(
-        "img/tabs/vegy.jpg",
-        "vegy",
-        'Меню "Фитнес"',
-        'Меню "Фитнес" - это новый подход к приготовлению блюд: больше свежих овощей и фруктов. Продукт активных и здоровых людей. Это абсолютно новый продукт с оптимальной ценой и высоким качеством!',
-        9,
-        '.menu .container'
-    ).render();
-    new MenuCard(
-        "img/tabs/elite.jpg",
-        "elite",
-        'Меню “Премиум”',
-        'В меню “Премиум” мы используем не только красивый дизайн упаковки, но и качественное исполнение блюд. Красная рыба, морепродукты, фрукты - ресторанное меню без похода в ресторан!',
-        9,
-        '.menu .container'
-    ).render();
+//     const getResource = async (url) => { 
+//         const res = await fetch(url);
 
-    new MenuCard(
-        "img/tabs/post.jpg",
-        "post",
-        'Меню "Постное"',
-        'Меню “Постное” - это тщательный подбор ингредиентов: полное отсутствие продуктов животного происхождения, молоко из миндаля, овса, кокоса или гречки, правильное количество белков за счет тофу и импортных вегетарианских стейков.',
-        9,
-        '.menu .container'
-    ).render();
+//         if (!res.ok) {
+//             throw new Error(`Could not fetch ${url}, status: ${res.status}`); // Выкидываем ошибку
+//         }
+
+//         return await res.json(); // Возвращаем promis из fetch и обрабатываем методом json
+//    };
+
+//    getResource('http://localhost:3000/menu')
+//         .then(data => {
+//             data.forEach(({img, altimg, title, descr, price}) => {
+//                 new MenuCard(img, altimg, title, descr, price, '.menu .container').render();
+//             });
+//         });
+
+   axios.get('http://localhost:3000/menu') // библиотека axios
+        .then(data => {
+            data.data.forEach(({img, altimg, title, descr, price}) => {
+                new MenuCard(img, altimg, title, descr, price, '.menu .container').render();
+            });
+        });
+
+    // getResource('http://localhost:3000/menu') // Способ при котором мы лишаемся шаблонизации и this нам не нужен
+    //     .then(data => createCard(data));
+
+    // function createCard(data) {
+    //     data.forEach(({img, altimg, title, descr, price}) => {
+    //         const element = document.createElement('div');
+
+    //         element.classList.add('menu__item');
+    //         price = price * 98;
+    //         element.innerHTML = `
+    //             <img src=${img} alt=${altimg}>
+    //             <h3 class="menu__item-subtitle">${title}</h3>
+    //             <div class="menu__item-descr">${descr}</div>
+    //             <div class="menu__item-divider"></div>
+    //             <div class="menu__item-price">
+    //                 <div class="menu__item-cost">Цена:</div>
+    //                 <div class="menu__item-total"><span>${price}</span> руб/день</div>
+    //             </div>
+    //         `;
+
+    //         document.querySelector('.menu .container').append(element);
+    //     });
+    // }
     
-
     // Forms
     // 2 Формата FormData и JSON
 
@@ -236,11 +257,23 @@ window.addEventListener('DOMContentLoaded', () => {
     failure: 'Что-то пошло не так...'
    };
 
+   const postData = async (url, data) => { // функция postData настраивает наш запрос fetchit, получает какой-то ответ от сервера и после этого трансформирует ответ в JSON
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                'Content-type': 'application/json'
+            },
+            body: data // Если нужно в не json формате, то просто formData без header
+        }); // await ждет когда код обработается
+
+        return await res.json(); // Возвращаем promis из fetch и обрабатываем методом json
+   };
+
    forms.forEach(item => { // Подвязываем под каждую форму функцию postData, которая является обработчиком события при отправке
-    postData(item);
+    bindPostData(item);
    });
    
-   function postData(form) {
+   function bindPostData(form) { // Функция отвечает за привязку постинга 
         form.addEventListener('submit', (e) => {
             e.preventDefault();
 
@@ -250,35 +283,26 @@ window.addEventListener('DOMContentLoaded', () => {
             form.append(statusMessage);
             form.insertAdjacentElement('afterend', statusMessage); // куда мы вставляем этот элемент и то что нужно вставить
 
-            const request = new XMLHttpRequest();
-            request.open('POST', 'server.php');
-
-            request.setRequestHeader('Content-type', 'application/json');
             const formData = new FormData(form);
 
-            const object = {};
-            formData.forEach(function(value, key) {
-                object[key] = value;
-            });
+            const json = JSON.stringify(Object.fromEntries(formData.entries())); // Сначала будем создавать массив массивов, а потом превращаем в классический объект, а потом в JSON, а потом отправляем на сервер
 
-            const json = JSON.stringify(object);
+            
 
-            request.send(json); // Отправляем на основании формы, которую мы заполнили
-
-            request.addEventListener('load', () => { // взаимодействие
-                if (request.status === 200) {
-                    console.log(request.response);
-                    showThanksModal(message.success);
-                    form.reset();
-                    statusMessage.remove(); // Используется только для loading
-                } else {
-                    showThanksModal(message.failure);
-                }
-             });
+            postData('http://localhost:3000/requests', json) // Вернется Promis, который мы обработаем с помощью then
+            .then(data => {
+                console.log(data); // data - те данные, которые возвращаются из промиса
+                showThanksModal(message.success);
+                statusMessage.remove(); // Используется только для loading
+            }).catch(() => {
+                showThanksModal(message.failure);
+            }).finally(() => {
+                form.reset();
+            })
         });
    }
     
-   function showThanksModal(message) {
+   function showThanksModal(message) { // Показывает нам message 
         const prevModalDialog = document.querySelector('.modal__dialog');
 
         prevModalDialog.classList.add('hide');
@@ -301,5 +325,85 @@ window.addEventListener('DOMContentLoaded', () => {
             closeModal();
         }, 4000);
    }
+
+   // Slider
+
+   const slides = document.querySelectorAll('.offer__slide'),
+         prev = document.querySelector('.offer__slider-prev'),
+         next = document.querySelector('.offer__slider-next'),
+         total = document.querySelector('#total'),
+         current = document.querySelector('#current'),
+         slidesWrapper = document.querySelector('.offer__slider-wrapper'),
+         slidesField = document.querySelector('.offer__slider-inner'),
+         width = window.getComputedStyle(slidesWrapper).width; // из window.getComputedStyle(slidesWrapper) вернется объект и мы получаем оттуда только width
+
+    let slideIndex = 1;
+    let offset = 0;
+
+    if (slides.length < 10) {
+        total.textContent = `0${slides.length}`;
+        current.textContent = `0${slideIndex}`;
+    } else {
+        total.textContent = slides.length;
+        current.textContent = slideIndex;
+
+    }
+
+   slidesField.style.width = 100 * slides.length + '%'; // Получаем кишку и закидываем во внутрь slidesField
+   slidesField.style.display = 'flex';
+   slidesField.style.transition = '0.5s all';
+
+   slidesWrapper.style.overflow = 'hidden';
+
+
+   slides.forEach(slide => { // Устанавливаем ширину строгую
+    slide.style.width = width;
+   });
+
+   next.addEventListener('click', () => {
+        if (offset == +width.slice(0, width.length - 2) * (slides.length - 1)) { // '650px'
+            offset = 0;
+        } else {
+            offset += +width.slice(0, width.length - 2);
+        }
+
+        slidesField.style.transform = `translateX(-${offset}px)` // Сдвигаем
+
+        if (slideIndex == slides.length) {
+            slideIndex = 1;
+        } else {
+            slideIndex++;
+        }
+
+        if (slides.length < 10) {
+            current.textContent = `0${slideIndex}`;
+        } else {
+            current.textContent = slideIndex;
+        }
+   });
+
+   prev.addEventListener('click', () => {
+    if (offset == 0) {     
+        offset = +width.slice(0, width.length - 2) * (slides.length - 1);
+    } else {
+        offset -= +width.slice(0, width.length - 2);
+    }
+
+    slidesField.style.transform = `translateX(-${offset}px)` // Сдвигаем
+
+    if (slideIndex == 1) {
+        slideIndex = slides.length;
+    } else {
+        slideIndex--;
+    }
+
+    if (slides.length < 10) {
+        current.textContent = `0${slideIndex}`;
+    } else {
+        current.textContent = slideIndex;
+    }
+});
+    
+
 });
 
