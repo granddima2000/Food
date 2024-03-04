@@ -2,33 +2,33 @@
 
 window.addEventListener('DOMContentLoaded', () => {
     // Tabs
-    const tabs = document.querySelectorAll('.tabheader__item'),
-          tabsContent = document.querySelectorAll('.tabcontent'),
-          tabParent = document.querySelector('.tabheader__items')
+    const tabs = document.querySelectorAll('.tabheader__item'), // табы 
+          tabsContent = document.querySelectorAll('.tabcontent'), // карточки с едой
+          tabParent = document.querySelector('.tabheader__items') // для делегирования в табах
     
-    function hideTableContent() {
-        tabsContent.forEach(item => {
+    function hideTableContent() { 
+        tabsContent.forEach(item => { // Скрывает карточки с едой и добавляет fade 
             item.classList.add('hide', 'fade');
             item.classList.remove('show');
         });
 
-        tabs.forEach(item => {
+        tabs.forEach(item => { // перебирает и удаляет класс активности у табов
             item.classList.remove('tabheader__item_active')
         });
            
     }
 
-    function showTableContent(i = 0) {
+    function showTableContent(i = 0) { // Определяет какая карточка и таб будет отображаться
         tabsContent[i].classList.remove('hide');
         tabsContent[i].classList.add('show');
         tabs[i].classList.add('tabheader__item_active')
     }
 
 
-    tabParent.addEventListener('click', (event) => {
+    tabParent.addEventListener('click', (event) => { 
         const target = event.target; // Чтобы переиспользовать эту конструкцию
         if (target && target.classList.contains('tabheader__item')) {
-            tabs.forEach((item, i) => {
+            tabs.forEach((item, i) => { 
                 if (target == item) {
                     hideTableContent();
                     showTableContent(i);
@@ -215,7 +215,7 @@ window.addEventListener('DOMContentLoaded', () => {
 //             });
 //         });
 
-   axios.get('http://localhost:3000/menu') // библиотека axios
+   axios.get('http://localhost:3000/menu') // библиотека axios, которая позволяет сократить код
         .then(data => {
             data.data.forEach(({img, altimg, title, descr, price}) => {
                 new MenuCard(img, altimg, title, descr, price, '.menu .container').render();
@@ -329,6 +329,7 @@ window.addEventListener('DOMContentLoaded', () => {
    // Slider
 
    const slides = document.querySelectorAll('.offer__slide'),
+         slider = document.querySelector('.offer__slider'),
          prev = document.querySelector('.offer__slider-prev'),
          next = document.querySelector('.offer__slider-next'),
          total = document.querySelector('#total'),
@@ -349,25 +350,60 @@ window.addEventListener('DOMContentLoaded', () => {
 
     }
 
-   slidesField.style.width = 100 * slides.length + '%'; // Получаем кишку и закидываем во внутрь slidesField
-   slidesField.style.display = 'flex';
-   slidesField.style.transition = '0.5s all';
+    slidesField.style.width = 100 * slides.length + '%'; // Получаем кишку и закидываем во внутрь slidesField
+    slidesField.style.display = 'flex';
+    slidesField.style.transition = '0.5s all';
 
-   slidesWrapper.style.overflow = 'hidden';
+    slidesWrapper.style.overflow = 'hidden';
 
+    slider.style.position = 'relative';
 
-   slides.forEach(slide => { // Устанавливаем ширину строгую
+    const indicators = document.createElement('ol'),
+            dots = [];
+    indicators.classList.add('carousel-indicators');
+    slider.append(indicators);
+
+    for (let i = 0; i < slides.length; i++) {
+        const dot = document.createElement('li');
+        dot.setAttribute('data-slide-to', i + 1);  // Каждой точке устанавливаем атрибут data-slide-to в i + 1  
+        dot.classList.add('dot');
+        if (i == 0) {
+            dot.style.opacity = 1;
+        }
+        indicators.append(dot);
+        dots.push(dot); // Теперь мы можем использовать массив, а до этого был псевдомассив
+    }
+
+    slides.forEach(slide => { // Устанавливаем ширину строгую
     slide.style.width = width;
-   });
+    });
+
+   function currentSlides() {
+        if (slides.length < 10) {
+            current.textContent = `0${slideIndex}`;
+        } else {
+            current.textContent = slideIndex;
+        }
+   }
+
+   function slidesTranslate() {
+        slidesField.style.transform = `translateX(-${offset}px)` // Сдвигаем
+   }
+
+   function dotsOpacity() {
+        dots.forEach(dot => dot.style.opacity = '.5');
+        dots[slideIndex - 1].style.opacity = 1;
+   }
 
    next.addEventListener('click', () => {
-        if (offset == +width.slice(0, width.length - 2) * (slides.length - 1)) { // '650px'
+        if (offset == deleteNotDigits(width) * (slides.length - 1)) { // '650px'
             offset = 0;
         } else {
-            offset += +width.slice(0, width.length - 2);
+            offset += deleteNotDigits(width);
         }
 
-        slidesField.style.transform = `translateX(-${offset}px)` // Сдвигаем
+        
+
 
         if (slideIndex == slides.length) {
             slideIndex = 1;
@@ -375,35 +411,152 @@ window.addEventListener('DOMContentLoaded', () => {
             slideIndex++;
         }
 
-        if (slides.length < 10) {
-            current.textContent = `0${slideIndex}`;
-        } else {
-            current.textContent = slideIndex;
-        }
+        dotsOpacity();
+        currentSlides();
+        slidesTranslate();
+        clearInterval(timerSlide);
+        
+
    });
 
-   prev.addEventListener('click', () => {
-    if (offset == 0) {     
-        offset = +width.slice(0, width.length - 2) * (slides.length - 1);
-    } else {
-        offset -= +width.slice(0, width.length - 2);
-    }
+    prev.addEventListener('click', () => {
+        if (offset == 0) {     
+            offset = deleteNotDigits(width) * (slides.length - 1);
+        } else {
+            offset -= deleteNotDigits(width);
+        }
 
-    slidesField.style.transform = `translateX(-${offset}px)` // Сдвигаем
+        
 
-    if (slideIndex == 1) {
-        slideIndex = slides.length;
-    } else {
-        slideIndex--;
-    }
+        if (slideIndex == 1) {
+            slideIndex = slides.length;
+        } else {
+            slideIndex--;
+        }
 
-    if (slides.length < 10) {
-        current.textContent = `0${slideIndex}`;
-    } else {
-        current.textContent = slideIndex;
-    }
-});
+        dotsOpacity();
+        currentSlides();
+        slidesTranslate();
+        clearInterval(timerSlide);
+    });
     
+    dots.forEach(dot => {
+        dot.addEventListener('click', (e) => {
+            const slideTo = e.target.getAttribute('data-slide-to');
+
+            slideIndex = slideTo;
+            offset = deleteNotDigits(width) * (slideTo - 1);
+
+            dotsOpacity();
+            currentSlides()
+            slidesTranslate()
+            clearInterval(timerSlide);
+        });
+    });
+
+    function deleteNotDigits(str) {
+        return +str.replace(/\D/g, '');
+    }
+
+    function nextSlide() {
+        if (offset == deleteNotDigits(width) * (slides.length - 1)) { // '650px'
+            offset = 0;
+        } else {
+            offset += deleteNotDigits(width);
+        }
+
+        slidesTranslate();
+
+
+        if (slideIndex == slides.length) {
+            slideIndex = 1;
+        } else {
+            slideIndex++;
+        }
+
+        dotsOpacity();
+
+        currentSlides();
+    }
+
+    const timerSlide = setInterval(() => {
+        nextSlide();
+    }, 2500);
+
+
+    // Calc
+
+    const result = document.querySelector('.calculating__result span'); 
+    let sex = 'female', 
+        height, weight, age, 
+        ratio = 1.375;
+
+
+    function calcTotal() { // занимается расчетом на мужчину / женщину 
+        if (!sex || !height || !weight || !age || !ratio) {
+            result.textContent = '____';
+            return;
+        }
+
+        if (sex === 'female') {
+            result.textContent = Math.round((447.6 + (9.2 * weight) + (3.1 * height) - (4.3 * age)) * ratio);
+        } else {
+            result.textContent = Math.round((88.36 + (13.4 * weight) + (4.8 * height) - (5.7 * age)) * ratio);
+        }
+    }
+
+    calcTotal(); 
+
+    function getStaticInformation(parantSelector, activeClass) {
+        const elements = document.querySelectorAll(`${parantSelector} div`);
+
+        elements.forEach(elem => {
+            elem.addEventListener('click', (e) => {
+                if (e.target.getAttribute('data-ratio')) {
+                    ratio = +e.target.getAttribute('data-ratio');
+                } else {
+                    sex = e.target.getAttribute('id');
+                }
+    
+                elements.forEach(elem => {
+                    elem.classList.remove(activeClass);
+                });
+    
+                e.target.classList.add(activeClass);
+    
+                calcTotal(); 
+            });
+        });      
+    }
+
+    getStaticInformation('#gender', 'calculating__choose-item_active');
+    getStaticInformation('.calculating__choose_big', 'calculating__choose-item_active');
+
+    function getDinamicInformation(selector) {
+        const input = document.querySelector(selector);
+
+        input.addEventListener('input', () => {
+            switch(input.getAttribute('id')) {
+                case 'height':
+                    height = +input.value;
+                    break;
+                case 'weight':
+                    weight = +input.value;
+                    break;
+                case 'age':
+                    age = +input.value;
+                    break;
+            }
+
+            calcTotal(); 
+        });
+        
+    }
+
+    getDinamicInformation('#height');
+    getDinamicInformation('#weight');
+    getDinamicInformation('#age');
+
 
 });
 
